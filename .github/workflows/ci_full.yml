@@ -1,35 +1,68 @@
 name: CI (Full)
-on: [push, pull_request]
+
+on:
+  push:
+  pull_request:
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
 jobs:
   python-lint:
     runs-on: ubuntu-latest
-    strategy: {matrix: {python-version: ['3.11','3.12']}}
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: {python-version: ${{ matrix.python-version }}}
-      - run: |
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
           python -m pip install --upgrade pip
           pip install fastapi uvicorn ruff mypy
-      - run: ruff check api
-      - run: mypy --ignore-missing-imports api/main.py
-      - run: python -m py_compile api/main.py
+
+      - name: Ruff (lint)
+        run: ruff check api
+
+      - name: mypy (types; permissive)
+        run: mypy --ignore-missing-imports api/main.py
+
+      - name: Syntax check
+        run: python -m py_compile api/main.py
+
   docker-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
-        with: {context: ./api, push: false, load: false}
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./api
+          push: false
+          load: false
+
   arduino-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Prepare config.h
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare config.h (no secrets)
         run: |
           mkdir -p arduino
           cat > arduino/config.h <<'CFG'
@@ -40,14 +73,25 @@ jobs:
           #define RELAY_HOST  "127.0.0.1"
           #define RELAY_PATH  "/relay_open"
           CFG
-      - uses: arduino/setup-arduino-cli@v1
-        with: {version: latest}
-      - run: |
+
+      - name: Setup Arduino CLI
+        uses: arduino/setup-arduino-cli@v1
+        with:
+          version: latest
+
+      - name: Configure Arduino CLI and install cores
+        run: |
           arduino-cli config init
           arduino-cli config add board_manager.additional_urls https://arduino.esp8266.com/stable/package_esp8266com_index.json
           arduino-cli core update-index
           arduino-cli core install arduino:avr
           arduino-cli core install esp8266:esp8266
-      - run: arduino-cli compile --fqbn arduino:avr:nano:cpu=atmega328old arduino/Nano
-      - run: arduino-cli compile --fqbn esp8266:esp8266:nodemcuv2 arduino/ESP8266
-      - run: arduino-cli compile --fqbn esp8266:esp8266:esp01_1m arduino/ESP01S_Relay
+
+      - name: Compile Nano (ATmega328P Old Bootloader)
+        run: arduino-cli compile --fqbn arduino:avr:nano:cpu=atmega328old arduino/Nano
+
+      - name: Compile ESP8266 (NodeMCU 1.0 ESP-12E)
+        run: arduino-cli compile --fqbn esp8266:esp8266:nodemcuv2 arduino/ESP8266
+
+      - name: Compile ESP-01S Relay (1M)
+        run: arduino-cli compile --fqbn esp8266:esp8266:esp01_1m arduino/ESP01S_Relay
