@@ -10,10 +10,11 @@ concurrency:
 
 jobs:
   python-lint:
+    name: Python Lint & Type Check
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11', '3.12']
+        python-version: ["3.11", "3.12"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,6 +39,7 @@ jobs:
         run: python -m py_compile api/main.py
 
   docker-build:
+    name: Docker Build (API)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -57,6 +59,7 @@ jobs:
           load: false
 
   arduino-build:
+    name: Arduino Build (Nano + ESP8266 + ESP-01S)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -76,8 +79,7 @@ jobs:
 
       - name: Setup Arduino CLI
         uses: arduino/setup-arduino-cli@v1
-        with:
-          version: latest
+        # No explicit version: use the action's stable default
 
       - name: Configure Arduino CLI and install cores
         run: |
