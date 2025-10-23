@@ -9,6 +9,8 @@ to an **ESP8266 gateway**, verifies tag UIDs via a **FastAPI backend**, and trig
 ![Backend](https://img.shields.io/badge/backend-FastAPI-green)
 ![Dockerized](https://img.shields.io/badge/deployment-Docker-orange)
 [![CI](https://github.com/meirg9/rfid-access-controller/actions/workflows/lint.yml/badge.svg)](https://github.com/meirg9/rfid-access-controller/actions)
+[![FULL-CI](https://github.com/meirg9/rfid-access-controller/actions/workflows/ci_full.yml/badge.svg)](https://github.com/meirg9/rfid-access-controller/actions)
+
 
 ---
 
