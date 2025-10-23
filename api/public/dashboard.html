@@ -1,0 +1,59 @@
+<!doctype html>
+<!--
+===============================================================================
+File: public/dashboard.html — Minimal live dashboard for recent RFID scans
+Purpose:
+  - Poll the FastAPI backend (/api/recent?limit=10) once per second.
+  - Render a compact table with the last 10 scan events persisted in SQLite.
+  - Visually distinguish OK vs ERR rows with background colors.
+  - Blink the first row briefly when a new topmost scan arrives.
+===============================================================================
+-->
+<meta charset="utf-8"/>
+<title>RFID — Recent Scans</title>
+<style>
+  :root { font-family: system-ui, sans-serif; }
+  body { margin: 18px; }
+  h2 { margin: 0 0 12px; }
+  table { border-collapse: collapse; width: 100%; max-width: 640px; }
+  th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; }
+  tr.ok td { background: #e8f5e9; }
+  tr.err td { background: #ffebee; }
+  .blink { animation: flash 0.7s ease-in-out 3; }
+  @keyframes flash { 50% { outline: 3px solid #000; } }
+  small { color:#666 }
+</style>
+<h2>Recent Scans</h2>
+<table>
+  <thead><tr><th>#</th><th>Time</th><th>UID</th><th>Status</th></tr></thead>
+  <tbody id="tbody"></tbody>
+</table>
+<small>Shows last 10 scans from SQLite. First row blinks on change.</small>
+<script>
+let lastTs = 0;
+const tbody = document.getElementById('tbody');
+function tsFmt(t){ return new Date(t*1000).toLocaleString(); }
+function render(list){
+  tbody.innerHTML = '';
+  list.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    tr.className = r.ok ? 'ok' : 'err';
+    tr.innerHTML = `<td>${i+1}</td><td>${tsFmt(r.ts)}</td><td>${r.uid}</td><td>${r.ok?'OK':'ERR'}</td>`;
+    tbody.appendChild(tr);
+  });
+  if (list.length && list[0].ts !== lastTs) {
+    lastTs = list[0].ts;
+    const tr0 = tbody.firstChild;
+    tr0.classList.add('blink');
+    setTimeout(()=>tr0.classList.remove('blink'), 1600);
+  }
+}
+async function tick(){
+  try {
+    const res = await fetch('/api/recent?limit=10');
+    render(await res.json());
+  } catch(_) {}
+  setTimeout(tick, 1000);
+}
+tick();
+</script>
