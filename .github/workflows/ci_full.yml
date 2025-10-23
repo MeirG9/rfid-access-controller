@@ -67,8 +67,8 @@ jobs:
 
       - name: Prepare config.h (no secrets)
         run: |
-          mkdir -p arduino
-          cat > arduino/config.h <<'CFG'
+          # Create dummy config.h for CI testing
+          cat > config.h <<'CFG'
           #pragma once
           #define WIFI_SSID   "TEST_SSID"
           #define WIFI_PASS   "TEST_PASS"
@@ -77,9 +77,21 @@ jobs:
           #define RELAY_PATH  "/relay_open"
           CFG
 
+          # Copy config.h into each Arduino sketch folder (so #include works anywhere)
+          mkdir -p arduino/Nano arduino/ESP8266 arduino/ESP01S_Relay
+          cp config.h arduino/Nano/config.h
+          cp config.h arduino/ESP8266/config.h
+          cp config.h arduino/ESP01S_Relay/config.h
+
+          # Patch includes for CI build (safe for both ../config.h and ./config.h)
+          sed -i 's#\.\./config.h#config.h#g' arduino/ESP8266/*.ino || true
+          sed -i 's#\./config.h#config.h#g' arduino/ESP8266/*.ino || true
+          sed -i 's#\.\./config.h#config.h#g' arduino/ESP01S_Relay/*.ino || true
+          sed -i 's#\./config.h#config.h#g' arduino/ESP01S_Relay/*.ino || true
+
       - name: Setup Arduino CLI
         uses: arduino/setup-arduino-cli@v1
-        # No explicit version: use the action's stable default
+        # Using default stable version (avoids "unable to get latest version")
 
       - name: Configure Arduino CLI and install cores
         run: |
